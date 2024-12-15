@@ -2,5 +2,4 @@ requests
 lxml
 beautifulsoup4
 logging
-re
 shutil
