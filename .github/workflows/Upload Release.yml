@@ -43,13 +43,15 @@ jobs:
             jq -r --arg VERSION "$VERSION" '.[] | select(.tag_name == $VERSION) | .id')
 
           if [ -n "$RELEASE_EXISTS" ]; then
-            echo "Release for version $VERSION already exists. Skipping."
-            exit 0
-          fi
-          echo "No existing release found for version $VERSION. Proceeding with release."
+            echo "Release for version $VERSION already exists. Skipping release creation."
+            echo "RELEASE_EXISTS=true" >> $GITHUB_ENV
+          else
+            echo "No existing release found for version $VERSION. Proceeding with release."
+            echo "RELEASE_EXISTS=false" >> $GITHUB_ENV
 
-      # 创建 ZIP 文件
+      # 创建 ZIP 文件（带版本号）
       - name: Create ZIP file with required files
+        if: env.RELEASE_EXISTS == 'false'
         id: create_zip
         run: |
           ZIP_FILE="NetworkSetup-${{ env.VERSION }}.zip"
@@ -58,23 +60,21 @@ jobs:
 
       # 创建 GitHub Release
       - name: Create GitHub Release
+        if: env.RELEASE_EXISTS == 'false'
         id: create_release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ env.VERSION }}
-          release_name: Release NetworkSetup ${{ env.VERSION }}
-          body: |
-            This release includes the following files for version ${{ env.VERSION }}:
-            - NetworkSetup.exe
-            - UpdateLogv5.0.htm
-            - update.zip
+          release_name: ${{ env.VERSION }}  # Release 页面仅显示版本号
+          body: ${{ env.VERSION }}  # Release 内容也显示版本号
           draft: false
           prerelease: false
 
       # 上传 ZIP 文件到 Release
       - name: Upload ZIP file to GitHub Release
+        if: env.RELEASE_EXISTS == 'false'
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -83,3 +83,8 @@ jobs:
           asset_path: ${{ env.ZIP_FILE }}
           asset_name: ${{ env.ZIP_FILE }}
           asset_content_type: application/zip
+
+      # 打印信息：如果 Release 已存在
+      - name: Log Existing Release
+        if: env.RELEASE_EXISTS == 'true'
+        run: echo "Release for version ${{ env.VERSION }} already exists. No further action is needed."
