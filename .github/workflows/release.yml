@@ -4,6 +4,9 @@ on:
   push:
     tags:
       - '版本-*'  # 监听版本标签的推送，版本标签格式例如 '版本-7.1.5.0'
+  workflow_dispatch:  # 允许手动触发
+  schedule:
+    - cron: '0 8 * * *'  # 每天的 UTC 时间 08:00 执行（注意：GitHub Actions 使用 UTC 时间）
 
 jobs:
   upload-release:
@@ -75,6 +78,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}  # 从创建的 Release 获取上传 URL
-          asset_path: ${{ steps.create_zip.outputs.ZIP_FILE }}  # ZIP 文件路径
-          asset_name: ${{ steps.create_zip.outputs.ZIP_FILE }}  # ZIP 文件名
+          asset_path: ${{ steps.create_zip.outputs.ZIP_FILE }}  # 要上传的 ZIP 文件路径
+          asset_name: ${{ steps.create_zip.outputs.ZIP_FILE }}  # 上传文件名
           asset_content_type: application/zip  # 设置文件类型为 ZIP
