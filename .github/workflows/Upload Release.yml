@@ -20,6 +20,7 @@ jobs:
       - name: Find folders in the root directory
         id: find_folder
         run: |
+          set -e  # 开启严格模式，遇到错误立即退出
           FOLDER_NAME=$(find . -maxdepth 1 -type d -name "版本-*" | sort -V | tail -n 1)
           if [ -z "$FOLDER_NAME" ]; then
             echo "No folder found that matches the pattern '版本-*'."
@@ -36,7 +37,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -e
           VERSION=${{ env.VERSION }}
+          echo "Checking if release for version $VERSION exists..."
           RELEASE_EXISTS=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
             -H "Accept: application/vnd.github.v3+json" \
             "https://api.github.com/repos/${{ github.repository }}/releases" | \
@@ -54,9 +57,12 @@ jobs:
         if: env.RELEASE_EXISTS == 'false'
         id: create_zip
         run: |
+          set -e
+          echo "Creating ZIP file for folder: ${{ env.FOLDER_NAME }}"
           ZIP_FILE="NetworkSetup-${{ env.VERSION }}.zip"
           zip -r $ZIP_FILE ${{ env.FOLDER_NAME }}/*
           echo "ZIP_FILE=$ZIP_FILE" >> $GITHUB_ENV
+          echo "Created ZIP file: $ZIP_FILE"
 
       # 创建 GitHub Release
       - name: Create GitHub Release
