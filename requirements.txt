@@ -1,5 +1,7 @@
+os
 requests
-lxml
-beautifulsoup4
-logging
+re
 shutil
+lxml
+bs4
+logging
