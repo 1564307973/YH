@@ -14,6 +14,21 @@ jobs:
         with:
           fetch - depth: 0  # 获取完整的仓库历史
 
+      # 新增：检查当前工作目录
+      - name: Print current working directory
+        run: |
+          pwd
+
+      # 新增：检查find命令是否可用
+      - name: Check find command
+        run: |
+          if [ -x "$(command -v find)" ]; then
+            echo "find command is available"
+          else
+            echo "find command is not available"
+            exit 1
+          fi
+
       - name: Get the version from folder name
         id: get_version_folder
         run: |
