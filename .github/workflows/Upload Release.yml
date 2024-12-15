@@ -37,7 +37,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          set -e
+          set -e  # 遇到错误立即退出
           VERSION=${{ env.VERSION }}
           echo "Checking if release for version $VERSION exists..."
           RELEASE_EXISTS=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
