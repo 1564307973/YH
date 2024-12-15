@@ -1,9 +1,9 @@
-name: Upload NetworkSetup.exe Release
+name: Upload Release
 
 on:
   push:
     tags:
-      - '版本-*'
+      - '版本-*'  # 监听版本标签的推送，版本标签格式例如 '版本-7.1.5.0'
 
 jobs:
   upload-release:
@@ -15,48 +15,66 @@ jobs:
       - name: Extract version from tag
         id: extract_version
         run: |
+          # 获取推送的标签名，去除前缀 'refs/tags/'，然后提取版本号部分
           TAG_NAME=${GITHUB_REF#refs/tags/}
-          VERSION=${TAG_NAME#版本-}
+          VERSION=${TAG_NAME#版本-}  # 提取版本号，去掉 '版本-' 前缀
+          echo "Version: $VERSION"
           echo ::set-output name=VERSION::$VERSION
         shell: bash
 
-      - name: Find NetworkSetup.exe in versioned folder
-        id: find_networksetup
+      - name: Find folder and files
+        id: find_files
         run: |
+          # 查找对应版本号的文件夹
           FOLDER_PATH="./版本-${{ steps.extract_version.outputs.VERSION }}"
           if [ -d "$FOLDER_PATH" ]; then
-            FILE_PATH="$FOLDER_PATH/羽华SMT快速编程系统NetworkSetup.exe"
-            if [ -f "$FILE_PATH" ]; then
-              echo ::set-output name=FILE_PATH::$FILE_PATH
-            else
-              echo "NetworkSetup.exe not found in folder $FOLDER_PATH"
-              exit 1
-            fi
+            # 查找文件夹里的所有文件
+            FILES=()
+            for file in "$FOLDER_PATH"/*; do
+              if [ -f "$file" ]; then
+                FILES+=("$file")
+              fi
+            done
+            echo "Found files: ${FILES[@]}"
+            echo ::set-output name=FILES::"${FILES[@]}"
           else
             echo "Folder $FOLDER_PATH not found"
             exit 1
           fi
         shell: bash
 
-      - name: Create Release
+      - name: Create ZIP file with required files
+        id: create_zip
+        run: |
+          FOLDER_PATH="./版本-${{ steps.extract_version.outputs.VERSION }}"
+          ZIP_FILE="NetworkSetup-${{ steps.extract_version.outputs.VERSION }}.zip"
+          # 将文件夹里的所有文件打包成 ZIP 文件
+          zip -r $ZIP_FILE $FOLDER_PATH/*
+          echo ::set-output name=ZIP_FILE::$ZIP_FILE
+        shell: bash
+
+      - name: Create GitHub Release
         id: create_release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}  # 使用推送的标签作为 Release 标签
           release_name: Release NetworkSetup ${{ steps.extract_version.outputs.VERSION }}
           body: |
-            This release includes NetworkSetup.exe for version ${{ steps.extract_version.outputs.VERSION }}.
-          draft: false
-          prerelease: false
+            This release includes the following files for version ${{ steps.extract_version.outputs.VERSION }}:
+            - NetworkSetup.exe
+            - UpdateLogv5.0.htm
+            - update.zip
+          draft: false  # 发布为正式版本
+          prerelease: false  # 不作为预发布版本
 
-      - name: Upload NetworkSetup.exe
+      - name: Upload ZIP file to GitHub Release
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ steps.find_networksetup.outputs.FILE_PATH }}
-          asset_name: NetworkSetup-${{ steps.extract_version.outputs.VERSION }}.exe
-          asset_content_type: application/octet-stream
+          upload_url: ${{ steps.create_release.outputs.upload_url }}  # 从创建的 Release 获取上传 URL
+          asset_path: ${{ steps.create_zip.outputs.ZIP_FILE }}  # ZIP 文件路径
+          asset_name: ${{ steps.create_zip.outputs.ZIP_FILE }}  # ZIP 文件名
+          asset_content_type: application/zip  # 设置文件类型为 ZIP
