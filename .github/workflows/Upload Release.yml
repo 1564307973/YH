@@ -1,0 +1,78 @@
+name: Upload Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+  schedule:
+    - cron: '0 8 * * *'
+
+jobs:
+  upload-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Find folders in the root directory
+        id: find_folder
+        run: |
+          FOLDER_NAME=$(find . -maxdepth 1 -type d -name "版本-*" | head -n 1)
+          if [ -z "$FOLDER_NAME" ]; then
+            echo "No folder found that matches the pattern '版本-*'."
+            exit 1
+          fi
+          VERSION=$(basename "$FOLDER_NAME" | sed 's/^版本-//')
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "FOLDER_NAME=$FOLDER_NAME" >> $GITHUB_ENV
+
+      - name: Check if Release already exists
+        id: check_release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=${{ env.VERSION }}
+          RELEASE_EXISTS=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/${{ github.repository }}/releases" | \
+            jq -r --arg VERSION "$VERSION" '.[] | select(.name == $VERSION) | .id')
+
+          if [ -n "$RELEASE_EXISTS" ]; then
+            echo "Release for version $VERSION already exists. Skipping."
+            exit 0
+          fi
+          echo "No existing release found for version $VERSION. Proceeding with release."
+
+      - name: Create ZIP file with required files
+        id: create_zip
+        run: |
+          ZIP_FILE="NetworkSetup-${VERSION}.zip"
+          zip -r $ZIP_FILE ${{ env.FOLDER_NAME }}/*
+          echo "ZIP_FILE=$ZIP_FILE" >> $GITHUB_ENV
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ env.VERSION }}
+          release_name: Release NetworkSetup ${{ env.VERSION }}
+          body: |
+            This release includes the following files for version ${{ env.VERSION }}:
+            - NetworkSetup.exe
+            - UpdateLogv5.0.htm
+            - update.zip
+          draft: false
+          prerelease: false
+
+      - name: Upload ZIP file to GitHub Release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ env.ZIP_FILE }}
+          asset_name: ${{ env.ZIP_FILE }}
+          asset_content_type: application/zip
