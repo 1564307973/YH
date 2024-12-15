@@ -1,6 +1,7 @@
 name: Run Python Script
 
 on:
+  workflow_dispatch:
   schedule:
     - cron: '5 0 * * *'  # 每天00:05运行
 
