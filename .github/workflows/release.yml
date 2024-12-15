@@ -2,11 +2,11 @@ name: Upload Release
 
 on:
   push:
-    tags:
-      - '版本-*'  # 监听版本标签的推送，版本标签格式例如 '版本-7.1.5.0'
+    branches:
+      - main  # 或者你希望监控的分支
   workflow_dispatch:  # 允许手动触发
   schedule:
-    - cron: '0 8 * * *'  # 每天的 UTC 时间 08:00 执行（注意：GitHub Actions 使用 UTC 时间）
+    - cron: '0 8 * * *'  # 每天 UTC 时间 08:00 执行（注意：GitHub Actions 使用 UTC 时间）
 
 jobs:
   upload-release:
@@ -15,23 +15,27 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Extract version from tag
-        id: extract_version
+      - name: Find folders in the root directory
+        id: find_folder
         run: |
-          # 获取推送的标签名，去除前缀 'refs/tags/'，然后提取版本号部分
-          TAG_NAME=${GITHUB_REF#refs/tags/}
-          VERSION=${TAG_NAME#版本-}  # 提取版本号，去掉 '版本-' 前缀
-          echo "Version: $VERSION"
+          # 在仓库根目录查找所有以 "版本-" 开头的文件夹
+          FOLDER_NAME=$(find . -maxdepth 1 -type d -name "版本-*" | head -n 1)  # 获取第一个符合条件的文件夹
+          if [ -z "$FOLDER_NAME" ]; then
+            echo "No folder found that matches the pattern '版本-*'."
+            exit 1
+          fi
+          VERSION=$(basename "$FOLDER_NAME" | sed 's/^版本-//')  # 提取文件夹名称作为版本号
+          echo "Found folder: $FOLDER_NAME, version: $VERSION"
           echo ::set-output name=VERSION::$VERSION
+          echo ::set-output name=FOLDER_NAME::$FOLDER_NAME
         shell: bash
 
-      - name: Find folder and files
+      - name: Find files in the folder
         id: find_files
         run: |
-          # 查找对应版本号的文件夹
-          FOLDER_PATH="./版本-${{ steps.extract_version.outputs.VERSION }}"
+          # 查找文件夹中的所有文件
+          FOLDER_PATH="${{ steps.find_folder.outputs.FOLDER_NAME }}"
           if [ -d "$FOLDER_PATH" ]; then
-            # 查找文件夹里的所有文件
             FILES=()
             for file in "$FOLDER_PATH"/*; do
               if [ -f "$file" ]; then
@@ -49,10 +53,9 @@ jobs:
       - name: Create ZIP file with required files
         id: create_zip
         run: |
-          FOLDER_PATH="./版本-${{ steps.extract_version.outputs.VERSION }}"
-          ZIP_FILE="NetworkSetup-${{ steps.extract_version.outputs.VERSION }}.zip"
-          # 将文件夹里的所有文件打包成 ZIP 文件
-          zip -r $ZIP_FILE $FOLDER_PATH/*
+          FOLDER_PATH="${{ steps.find_folder.outputs.FOLDER_NAME }}"
+          ZIP_FILE="NetworkSetup-${{ steps.find_folder.outputs.VERSION }}.zip"
+          zip -r $ZIP_FILE $FOLDER_PATH/*  # 打包文件夹中的所有文件
           echo ::set-output name=ZIP_FILE::$ZIP_FILE
         shell: bash
 
@@ -62,10 +65,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.ref_name }}  # 使用推送的标签作为 Release 标签
-          release_name: Release NetworkSetup ${{ steps.extract_version.outputs.VERSION }}
+          tag_name: ${{ steps.find_folder.outputs.VERSION }}  # 使用版本号作为 Release 标签
+          release_name: Release NetworkSetup ${{ steps.find_folder.outputs.VERSION }}
           body: |
-            This release includes the following files for version ${{ steps.extract_version.outputs.VERSION }}:
+            This release includes the following files for version ${{ steps.find_folder.outputs.VERSION }}:
             - NetworkSetup.exe
             - UpdateLogv5.0.htm
             - update.zip
