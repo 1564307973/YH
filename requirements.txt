@@ -1,5 +1,4 @@
 requests
-re
 shutil
 lxml
 bs4
