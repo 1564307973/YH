@@ -32,14 +32,14 @@ jobs:
         run: |
           # 查找以"版本-"开头的文件夹
           FOLDER=$(find . -type d -name "版本-*" | head -n 1)
-          if [ -n "$FOLDER" ]; then
-            # 提取版本号部分，去掉"版本-"前缀
-            VERSION=$(basename $FOLDER | sed 's/^版本-//')
-            echo "VERSION=$VERSION" >> $GITHUB_ENV
-          else
+          if [ -z "$FOLDER" ]; then
             echo "未找到符合格式的版本文件夹"
+            # 可以在这里添加一些其他操作，比如重试或发送错误报告
             exit 1
           fi
+          # 提取版本号部分，去掉"版本-"前缀
+          VERSION=$(basename $FOLDER | sed 's/^版本-//')
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: Check if release already exists
         id: check_release_exists
