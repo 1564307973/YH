@@ -3,8 +3,8 @@ name: Create Release
 on:
   push:
     tags:
-      - '版本*'  # 仅在推送带有版本前缀的标签时触发
-  workflow_dispatch:  # 添加手动执行事件
+      - '版本*'  # Trigger only when pushing tags with the version prefix
+  workflow_dispatch:  # Allow manual execution
 
 jobs:
   create-release:
@@ -13,7 +13,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
         with:
-          fetch-depth: 0  # 获取完整的仓库历史
+          fetch-depth: 0  # Fetch the full repository history
 
       - name: Print current working directory
         run: pwd
@@ -30,16 +30,15 @@ jobs:
       - name: Get the version from folder name
         id: get_version_folder
         run: |
-          # 查找以"版本-"开头的文件夹
+          # Find the folder that starts with "版本-"
           FOLDER=$(find . -type d -name "版本-*" | head -n 1)
           if [ -z "$FOLDER" ]; then
             echo "未找到符合格式的版本文件夹"
-            # 可以在这里添加一些其他操作，比如重试或发送错误报告
             exit 1
           fi
-          # 提取版本号部分，去掉"版本-"前缀
-          VERSION=$(basename $FOLDER | sed 's/^版本-//')
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          # Extract the version number by removing the "版本-" prefix
+          VERSION=$(basename$FOLDER | sed 's/^版本-//')
+          echo "VERSION=$VERSION" >>$GITHUB_ENV
 
       - name: Check if release already exists
         id: check_release_exists
@@ -52,33 +51,28 @@ jobs:
             });
             const version = process.env.VERSION;
             const exists = releases.some(r => r.tag_name === version);
-            console.log(`Release for version ${version} already exists: ${exists}`);
+            console.log(`Release for version ${version} already exists:${exists}`);
             core.setOutput('exists', exists);
-      
+
       - name: Create Release
-        if: steps.check_release_exists.outputs.exists!= true
-        runs-on: ubuntu-latest
+        if: steps.check_release_exists.outputs.exists != 'true'
+        uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        steps:
-          - name: Print VERSION variable
-            run: echo "VERSION=$VERSION"
-          - name: Create Release
-            if: ${{ env.VERSION != '' }}
-            uses: actions/create-release@v1
-            with:
-              tag_name: ${{ env.VERSION }}
-              release_name: "版本 ${{ env.VERSION }}"
-              draft: false
-              prerelease: false
-              
+        with:
+          tag_name: ${{ env.VERSION }}
+          release_name: "版本 ${{ env.VERSION }}"
+          draft: false
+          prerelease: false
+        id: create_release  # Set an ID to reference the outputs
 
       - name: Upload Release Asset
+        if: steps.check_release_exists.outputs.exists != 'true'
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: './版本-${{ steps.get_version_folder.outputs.VERSION }}/羽华SMT快速编程系统NetworkSetup.exe'
-          asset_name: "羽华SMT快速编程系统NetworkSetup_版本_{{ steps.get_version_folder.outputs.VERSION }}.exe"
+          asset_path: './版本-${{ env.VERSION }}/羽华SMT快速编程系统NetworkSetup.exe'
+          asset_name: "羽华SMT快速编程系统NetworkSetup_版本_${{ env.VERSION }}.exe"
           asset_content_type: application/octet-stream
