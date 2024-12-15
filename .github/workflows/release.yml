@@ -3,8 +3,8 @@ name: Create Release
 on:
   push:
     tags:
-      - '版本*'  # Trigger only when pushing tags with the version prefix
-  workflow_dispatch:  # Allow manual execution
+      - '版本*'  # 当推送带有版本前缀的标签时触发
+  workflow_dispatch:  # 允许手动执行
 
 jobs:
   create-release:
@@ -13,66 +13,32 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
         with:
-          fetch-depth: 0  # Fetch the full repository history
+          fetch-depth: 0  # 获取完整的仓库历史
 
-      - name: Print current working directory
-        run: pwd
-
-      - name: Check find command
+      - name: Get tag name
+        id: get_tag_name
         run: |
-          if [ -x "$(command -v find)" ]; then
-            echo "find command is available"
-          else
-            echo "find command is not available"
-            exit 1
-          fi
-
-      - name: Get the version from folder name
-        id: get_version_folder
-        run: |
-          # Find the folder that starts with "版本-"
-          FOLDER=$(find . -type d -name "版本-*" | head -n 1)
-          if [ -z "$FOLDER" ]; then
-            echo "未找到符合格式的版本文件夹"
-            exit 1
-          fi
-          # Extract the version number by removing the "版本-" prefix
-          VERSION=$(basename$FOLDER | sed 's/^版本-//')
-          echo "VERSION=$VERSION" >>$GITHUB_ENV
-
-      - name: Check if release already exists
-        id: check_release_exists
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const { data: releases } = await github.rest.repos.listReleases({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-            });
-            const version = process.env.VERSION;
-            const exists = releases.some(r => r.tag_name === version);
-            console.log(`Release for version ${version} already exists:${exists}`);
-            core.setOutput('exists', exists);
+          # 获取最新的标签名称
+          TAG_NAME=$(git describe --tags `git rev-list --tags --max-count=1`)
+          echo "tag_name=$TAG_NAME" >>$GITHUB_ENV
 
       - name: Create Release
-        if: steps.check_release_exists.outputs.exists != 'true'
+        id: create_release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ env.VERSION }}
-          release_name: "版本 ${{ env.VERSION }}"
+          tag_name: ${{ env.TAG_NAME }}
+          release_name: Release ${{ env.TAG_NAME }}
           draft: false
           prerelease: false
-        id: create_release  # Set an ID to reference the outputs
 
       - name: Upload Release Asset
-        if: steps.check_release_exists.outputs.exists != 'true'
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: './版本-${{ env.VERSION }}/羽华SMT快速编程系统NetworkSetup.exe'
-          asset_name: "羽华SMT快速编程系统NetworkSetup_版本_${{ env.VERSION }}.exe"
+          asset_path: './版本-${{ env.TAG_NAME }}/羽华SMT快速编程系统NetworkSetup.exe'
+          asset_name: "羽华SMT快速编程系统NetworkSetup${{ env.TAG_NAME }}.exe"
           asset_content_type: application/octet-stream
