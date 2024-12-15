@@ -3,51 +3,44 @@ name: Create Release
 on:
   push:
     tags:
-      - '版本-*'  # 当推送带有版本前缀的标签时触发
-  workflow_dispatch:  # 允许手动执行
+      - '版本-*' # 匹配以"版本-"开头的标签
 
 jobs:
-  create-release:
+  release:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v2
-        with:
-          fetch-depth: 0  # 获取完整的仓库历史
 
       - name: Get tag name
         id: get_tag_name
-        run: |
-          # 获取最新的标签名称
-          TAG_NAME=$(git describe --tags `git rev-list --tags --max-count=1`)
-          # 设置环境变量供后续步骤使用
-          echo "TAG_NAME=$TAG_NAME" >>$GITHUB_ENV
+        run: echo ::set-output name=TAG_NAME::${GITHUB_REF#refs/tags/}
         shell: bash
-
-      - name: Create Release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ env.TAG_NAME }}
-          release_name: Release ${{ env.TAG_NAME }}
-          draft: false
-          prerelease: false
 
       - name: Extract version from tag
         id: extract_version
         run: |
-          # 从标签名称中提取版本号，假设格式为 "版本-7.1.5.0"
-          VERSION=$(echo${{ env.TAG_NAME }} | cut -d'-' -f2)
+          VERSION=$(echo${{ steps.get_tag_name.outputs.TAG_NAME }} | cut -d'-' -f2)
           echo "VERSION=$VERSION" >>$GITHUB_ENV
         shell: bash
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.get_tag_name.outputs.TAG_NAME }}
+          release_name: Release ${{ steps.get_tag_name.outputs.TAG_NAME }}
+          draft: false
+          prerelease: false
 
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create-release.outputs.upload_url }}
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./版本-${{ env.VERSION }}/羽华SMT快速编程系统NetworkSetup.exe
-          asset_name: 羽华SMT快速编程系统NetworkSetup${{ env.VERSION }}.exe
+          asset_name: NetworkSetup_${{ env.VERSION }}.exe
           asset_content_type: application/octet-stream
