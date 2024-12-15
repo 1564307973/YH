@@ -56,23 +56,22 @@ jobs:
             core.setOutput('exists', exists);
       
       - name: Create Release
-  if: steps.check_release_exists.outputs.exists!= true
-  runs-on: ubuntu-latest
-  env:
-    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  steps:
-    - name: Print VERSION variable
-      run: echo "VERSION=$VERSION"
-    - name: Create Release
-      if: ${{ env.VERSION != '' }}
-      uses: actions/create-release@v1
-      with:
-        tag_name: ${{ env.VERSION }}
-        release_name: "版本 ${{ env.VERSION }}"
-        draft: false
-        prerelease: false
-
-        
+        if: steps.check_release_exists.outputs.exists!= true
+        runs-on: ubuntu-latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        steps:
+          - name: Print VERSION variable
+            run: echo "VERSION=$VERSION"
+          - name: Create Release
+            if: ${{ env.VERSION != '' }}
+            uses: actions/create-release@v1
+            with:
+              tag_name: ${{ env.VERSION }}
+              release_name: "版本 ${{ env.VERSION }}"
+              draft: false
+              prerelease: false
+              
 
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
