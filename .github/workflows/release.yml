@@ -3,23 +3,25 @@ on:
   push:
     tags:
       - '版本*'  # 仅在推送带有版本前缀的标签时触发
-  workflow_dispatch:  # 添加手动执行事件，手动触发时也按正常流程自动处理
+  workflow_dispatch:  # 添加手动执行事件
 
 jobs:
   create-release:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu - latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
+        with:
+          fetch - depth: 0  # 获取完整的仓库历史
 
       - name: Get the version from folder name
-        id: get_version
+        id: get_version_folder
         run: |
           # 查找以"版本-"开头的文件夹
-          FOLDER=$(find. -type d -name "版本-*" | head -n 1)
-          if [ -n "$FOLDER" ]; then
+          FOLDER=$(find. - type d - name "版本-*" | head - n 1)
+          if [ - n "$FOLDER" ]; then
             # 提取版本号部分，去掉"版本-"前缀
-            VERSION=$(basename $FOLDER | sed 's/^版本-//')
+            VERSION=$(basename $FOLDER | sed's/^版本-//')
             echo "VERSION=$VERSION" >> $GITHUB_ENV
           else
             echo "未找到符合格式的版本文件夹"
@@ -28,7 +30,7 @@ jobs:
 
       - name: Check if release already exists
         id: check_release_exists
-        uses: actions/github-script@v6
+        uses: actions/github - script@v6
         with:
           script: |
             const { data: releases } = await github.rest.repos.listReleases({
@@ -43,21 +45,21 @@ jobs:
       - name: Create Release
         id: create_release
         if: steps.check_release_exists.outputs.exists!= true
-        uses: actions/create-release@v1
+        uses: actions/create - release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ steps.get_version.outputs.VERSION }}
-          release_name: "版本 ${{ steps.get_version.outputs.VERSION }}"
+          tag_name: ${{ steps.get_version_folder.outputs.VERSION }}
+          release_name: "版本 ${{ steps.get_version_folder.outputs.VERSION }}"
           draft: false
           prerelease: false
 
       - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
+        uses: actions/upload - release - asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: './版本-${{ steps.get_version.outputs.VERSION }}/羽华SMT快速编程系统NetworkSetup.exe'
-          asset_name: "羽华SMT快速编程系统NetworkSetup_版本_{{ steps.get_version.outputs.VERSION }}.exe"
-          asset_content_type: application/octet-stream
+          asset_path: './版本-${{ steps.get_version_folder.outputs.VERSION }}/羽华SMT快速编程系统NetworkSetup.exe'
+          asset_name: "羽华SMT快速编程系统NetworkSetup_版本_{{ steps.get_version_folder.outputs.VERSION }}.exe"
+          asset_content_type: application/octet - stream
