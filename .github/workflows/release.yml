@@ -1,0 +1,48 @@
+name: Create Release
+
+on:
+  push:
+    tags:
+      - '版本*'  # 仅在推送带有版本前缀的标签时触发
+  workflow_dispatch:  # 添加手动执行事件
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Get the version from the tag
+        id: get_version
+        if: github.ref_type == 'tag'
+        run: echo "VERSION=$(echo ${{ github.ref }} | sed 's/^refs\/tags\/版本-//')" >> $GITHUB_ENV
+
+      - name: Get the version from the workflow input
+        id: get_version_input
+        if: github.ref_type != 'tag'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.context.event.inputs.version
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.get_version.outputs.VERSION }}
+          release_name: "版本 ${{ steps.get_version.outputs.VERSION }}"
+          draft: false
+          prerelease: false
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: './Releases/羽华SMT快速编程系统NetworkSetup.exe'
+          asset_name: "羽华SMT快速编程系统NetworkSetup_版本_{{ steps.get_version.outputs.VERSION }}.exe"
+          asset_content_type: application/octet-stream
