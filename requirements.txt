@@ -1,5 +1,4 @@
 requests
-shutil
 lxml
 bs4
 logging
