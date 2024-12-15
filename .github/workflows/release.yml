@@ -3,7 +3,7 @@ name: Create Release
 on:
   push:
     tags:
-      - '版本*'  # 当推送带有版本前缀的标签时触发
+      - '版本-*'  # 当推送带有版本前缀的标签时触发
   workflow_dispatch:  # 允许手动执行
 
 jobs:
@@ -18,17 +18,13 @@ jobs:
       - name: Get tag name
         id: get_tag_name
         run: |
-          # 尝试获取最新的标签名称
-          LATEST_TAG=$(git describe --tags `git rev-list --tags --max-count=1` 2>/dev/null)
-          if [ -z "$LATEST_TAG" ]; then
-            echo "No tags found, setting default tag name."
-            LATEST_TAG="default"
-          fi
-          echo "tag_name=$LATEST_TAG" >>$GITHUB_ENV
+          # 获取最新的标签名称
+          TAG_NAME=$(git describe --tags `git rev-list --tags --max-count=1`)
+          # 设置环境变量供后续步骤使用
+          echo "TAG_NAME=$TAG_NAME" >>$GITHUB_ENV
         shell: bash
 
       - name: Create Release
-        id: create_release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -38,12 +34,20 @@ jobs:
           draft: false
           prerelease: false
 
+      - name: Extract version from tag
+        id: extract_version
+        run: |
+          # 从标签名称中提取版本号，假设格式为 "版本-7.1.5.0"
+          VERSION=$(echo${{ env.TAG_NAME }} | cut -d'-' -f2)
+          echo "VERSION=$VERSION" >>$GITHUB_ENV
+        shell: bash
+
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: './版本-${{ env.TAG_NAME }}/羽华SMT快速编程系统NetworkSetup.exe'
-          asset_name: "羽华SMT快速编程系统NetworkSetup${{ env.TAG_NAME }}.exe"
+          upload_url: ${{ steps.create-release.outputs.upload_url }}
+          asset_path: ./版本-${{ env.VERSION }}/羽华SMT快速编程系统NetworkSetup.exe
+          asset_name: 羽华SMT快速编程系统NetworkSetup${{ env.VERSION }}.exe
           asset_content_type: application/octet-stream
