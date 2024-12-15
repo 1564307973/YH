@@ -6,7 +6,7 @@ on:
       - main
   workflow_dispatch:
   schedule:
-    - cron: '0 8 * * *'
+    - cron: '0 8 * * *'  # 每天 UTC 时间 08:00 执行（注意：GitHub Actions 使用 UTC 时间）
 
 jobs:
   upload-release:
@@ -40,17 +40,21 @@ jobs:
           set -e  # 遇到错误立即退出
           VERSION=${{ env.VERSION }}
           echo "Checking if release for version $VERSION exists..."
+          
+          # 使用 curl 调用 GitHub API，检查是否已发布该版本的 Release
           RELEASE_EXISTS=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
             -H "Accept: application/vnd.github.v3+json" \
             "https://api.github.com/repos/${{ github.repository }}/releases" | \
             jq -r --arg VERSION "$VERSION" '.[] | select(.tag_name == $VERSION) | .id')
 
+          # 检查是否已存在 Release
           if [ -n "$RELEASE_EXISTS" ]; then
             echo "Release for version $VERSION already exists. Skipping release creation."
             echo "RELEASE_EXISTS=true" >> $GITHUB_ENV
           else
             echo "No existing release found for version $VERSION. Proceeding with release."
             echo "RELEASE_EXISTS=false" >> $GITHUB_ENV
+          fi  # 确保添加了 fi 来结束 if 语句
 
       # 创建 ZIP 文件（带版本号）
       - name: Create ZIP file with required files
