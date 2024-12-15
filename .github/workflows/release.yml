@@ -18,9 +18,14 @@ jobs:
       - name: Get tag name
         id: get_tag_name
         run: |
-          # 获取最新的标签名称
-          TAG_NAME=$(git describe --tags `git rev-list --tags --max-count=1`)
-          echo "tag_name=$TAG_NAME" >>$GITHUB_ENV
+          # 尝试获取最新的标签名称
+          LATEST_TAG=$(git describe --tags `git rev-list --tags --max-count=1` 2>/dev/null)
+          if [ -z "$LATEST_TAG" ]; then
+            echo "No tags found, setting default tag name."
+            LATEST_TAG="default"
+          fi
+          echo "tag_name=$LATEST_TAG" >>$GITHUB_ENV
+        shell: bash
 
       - name: Create Release
         id: create_release
