@@ -1,8 +1,6 @@
 import os
 import requests
 import re
-import shutil
-import lxml
 from bs4 import BeautifulSoup
 import logging
 
@@ -13,6 +11,8 @@ logging.basicConfig(filename='update.log', level=logging.INFO, format='%(asctime
 INTERFACE_URL = "https://smtapi.smtoem.cn/updateFlie/Autoupdater.xml"
 INSTALL_PACKAGE_URL = "https://smtapi.smtoem.cn/updateFlie/羽华SMT快速编程系统NetworkSetup.exe"
 INCREMENTAL_UPDATE_URL = "https://smtapi.smtoem.cn/updateFlie/update.zip"
+LOG_FILE_URL = "https://smtapi.smtoem.cn/updateFlie/UpdateLogv5.0.htm"
+BASE_URL = "https://smtapi.smtoem.cn/updateFlie/"
 
 def get_latest_version_from_interface():
     """从接口获取最新版本号"""
@@ -21,7 +21,6 @@ def get_latest_version_from_interface():
         try:
             response = requests.get(INTERFACE_URL, timeout=10)
             response.raise_for_status()
-            # 使用 'lxml-xml' 作为解析器
             soup = BeautifulSoup(response.text, 'lxml-xml')
             return soup.find('version').text
         except requests.exceptions.RequestException as e:
@@ -39,20 +38,32 @@ def get_local_versions():
             local_versions.append(version)
     return local_versions
 
-def download_file(url, save_path):
-    """下载文件并显示进度"""
+def download_file(url, save_path, base_url=None):
+    """下载文件并显示进度，支持处理 HTML 的相对路径补全"""
     try:
         response = requests.get(url, stream=True, timeout=30)
         response.raise_for_status()
-        total_size = int(response.headers.get('content-length', 0))
-        downloaded_size = 0
-        with open(save_path, 'wb') as f:
-            for data in response.iter_content(chunk_size=1024):
-                downloaded_size += len(data)
-                f.write(data)
-                progress = int(downloaded_size / total_size * 100)
-                print(f"下载进度: {progress}%", end='\r')
-        print()
+        if base_url and save_path.endswith('.htm'):
+            # 如果是 HTML 文件，解析并补全相对路径
+            soup = BeautifulSoup(response.content, 'lxml')
+            for tag in soup.find_all(['img', 'link', 'script']):
+                attr = 'src' if tag.name in ['img', 'script'] else 'href'
+                if tag.get(attr) and not re.match(r'^https?://', tag[attr]):
+                    tag[attr] = requests.compat.urljoin(base_url, tag[attr])
+            # 将补全后的 HTML 保存
+            with open(save_path, 'w', encoding='utf-8') as f:
+                f.write(str(soup))
+        else:
+            # 普通文件下载
+            total_size = int(response.headers.get('content-length', 0))
+            downloaded_size = 0
+            with open(save_path, 'wb') as f:
+                for data in response.iter_content(chunk_size=1024):
+                    downloaded_size += len(data)
+                    f.write(data)
+                    progress = int(downloaded_size / total_size * 100)
+                    print(f"下载进度: {progress}%", end='\r')
+            print()
     except requests.exceptions.RequestException as e:
         logging.error(f"下载文件 {save_path} 时出错: {str(e)}")
         print(f"下载文件时出错: {str(e)}")
@@ -77,7 +88,7 @@ def update_software():
         log_path_folder = os.path.join(version_folder, "UpdateLogv5.0.htm")
         download_file(INSTALL_PACKAGE_URL, install_package_path)
         download_file(INCREMENTAL_UPDATE_URL, incremental_update_path)
-        download_file("https://smtapi.smtoem.cn/updateFlie/UpdateLogv5.0.htm", log_path_folder)
+        download_file(LOG_FILE_URL, log_path_folder, base_url=BASE_URL)
         logging.info("首次下载软件相关文件，爬取完成。 %s", latest_version_interface)
         return
 
@@ -97,7 +108,7 @@ def update_software():
         log_path_folder = os.path.join(version_folder, "UpdateLogv5.0.htm")
         download_file(INSTALL_PACKAGE_URL, install_package_path)
         download_file(INCREMENTAL_UPDATE_URL, incremental_update_path)
-        download_file("https://smtapi.smtoem.cn/updateFlie/UpdateLogv5.0.htm", log_path_folder)
+        download_file(LOG_FILE_URL, log_path_folder, base_url=BASE_URL)
         logging.info("软件有更新，已完成爬取操作。 %s", latest_version_interface)
     else:
         logging.info("软件已是最新版本，无需爬取。 %s", local_max_version)
