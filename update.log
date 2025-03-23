@@ -104,3 +104,4 @@
 2025-03-22 02:01:04 - 下载文件 版本-7.3.6.0/update.zip 时出错: HTTPSConnectionPool(host='smtapi.smtoem.cn', port=443): Read timed out.
 2025-03-22 02:01:05 - 下载文件 版本-7.3.6.0/UpdateLogv5.0.htm 时出错: 404 Client Error: Not Found for url: https://smtapi.smtoem.cn/updateFlie/UpdateLogv5.0.htm
 2025-03-22 02:01:05 - 软件有更新，已完成爬取操作。 7.3.6.0
+2025-03-23 02:03:47 - 软件已是最新版本，无需爬取。 7.3.6.0
