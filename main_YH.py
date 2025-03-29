@@ -11,7 +11,7 @@ logging.basicConfig(filename='update.log', level=logging.INFO, format='%(asctime
 INTERFACE_URL = "https://smtapi.smtoem.cn/updateFlie/Autoupdater.xml"
 INSTALL_PACKAGE_URL = "https://smtapi.smtoem.cn/updateFlie/羽华SMT快速编程系统NetworkSetup.exe"
 INCREMENTAL_UPDATE_URL = "https://smtapi.smtoem.cn/updateFlie/update.zip"
-LOG_FILE_URL = "https://smtapi.smtoem.cn/updateFlie/UpdateLogv5.0.htm"
+LOG_FILE_URL = "https://smtapi.smtoem.cn/updateFlie/update.html"
 BASE_URL = "https://smtapi.smtoem.cn/updateFlie/"
 
 def get_latest_version_from_interface():
