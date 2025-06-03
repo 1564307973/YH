@@ -24,7 +24,7 @@ jobs:
         id: find_folder
         run: |
           set -e
-          cat > find_latest_version.py <<'PYEOF'
+          cat > find_latest_version.py <<PYEOF
 import os, re, sys
 def parse_version(s):
     return [int(x) for x in s.split('.')]
