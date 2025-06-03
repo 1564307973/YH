@@ -21,8 +21,7 @@ jobs:
         id: find_folder
         run: |
           set -e
-          # 用 Python 找到最大版本号的文件夹，支持多级版本号
-          FOLDER_NAME=$(python3 -c "
+          FOLDER_NAME=$(python3 <<EOF
 import os, re, sys
 def parse_version(s):
     return [int(x) for x in s.split('.')]
@@ -36,7 +35,8 @@ if not candidates:
     print('', end=''); sys.exit(1)
 latest = max(candidates, key=lambda x: parse_version(x[1]))
 print(latest[0], end='')
-")
+EOF
+)
           if [ -z "$FOLDER_NAME" ]; then
             echo "No valid '版本-*' folder found in the root directory."
             exit 1
