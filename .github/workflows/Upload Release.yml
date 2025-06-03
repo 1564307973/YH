@@ -25,8 +25,8 @@ jobs:
         run: |
           set -e
           today=$(date +%Y-%m-%d)
-          # 找出今天新建的所有版本-*文件夹
-          folders=$(find . -maxdepth 1 -type d -name "版本-*" -printf "%T@ %p\n" | awk -v d="$today" '
+          # 找出今天新建的所有版本-*文件夹（只看主版本号为1的优先，否则全部）
+          folders=$(find . -maxdepth 1 -type d -name "版本-1.*" -printf "%T@ %p\n" | awk -v d="$today" '
             {
               cmd="date -d @"$1" +\"%Y-%m-%d\""
               cmd | getline folder_date
@@ -34,6 +34,16 @@ jobs:
               if(folder_date == d) print $2
             }
           ')
+          if [ -z "$folders" ]; then
+            folders=$(find . -maxdepth 1 -type d -name "版本-*" -printf "%T@ %p\n" | awk -v d="$today" '
+              {
+                cmd="date -d @"$1" +\"%Y-%m-%d\""
+                cmd | getline folder_date
+                close(cmd)
+                if(folder_date == d) print $2
+              }
+            ')
+          fi
           if [ -z "$folders" ]; then
             echo "No new version folder found for today, nothing to release."
             exit 0
