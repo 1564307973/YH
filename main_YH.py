@@ -68,6 +68,28 @@ def download_file(url, save_path, base_url=None):
         logging.error(f"下载文件 {save_path} 时出错: {str(e)}")
         print(f"下载文件时出错: {str(e)}")
 
+def parse_version(version_str):
+    """将版本号字符串转为整数列表，便于比较"""
+    return [int(x) for x in version_str.split('.')]
+
+def compare_versions(v1, v2):
+    """
+    比较两个版本号字符串
+    返回值: 1 表示v1>v2, -1 表示v1<v2, 0 表示相等
+    """
+    parts1 = parse_version(v1)
+    parts2 = parse_version(v2)
+    # 补齐位数
+    maxlen = max(len(parts1), len(parts2))
+    parts1 += [0] * (maxlen - len(parts1))
+    parts2 += [0] * (maxlen - len(parts2))
+    for a, b in zip(parts1, parts2):
+        if a > b:
+            return 1
+        elif a < b:
+            return -1
+    return 0
+
 def update_software():
     """检查并更新软件"""
     # 从接口获取最新版本号
@@ -93,16 +115,13 @@ def update_software():
         return
 
     # 对比接口获取的版本号和本地最大版本号
-    local_versions.sort(key=lambda x: tuple(map(int, x.split('.'))), reverse=True)
+    local_versions.sort(key=lambda x: parse_version(x), reverse=True)
     local_max_version = local_versions[0]
-    version_parts_interface = tuple(map(int, latest_version_interface.split('.')))
-    version_parts_local_max = tuple(map(int, local_max_version.split('.')))
-    if version_parts_interface > version_parts_local_max:
+    cmp_result = compare_versions(latest_version_interface, local_max_version)
+    if cmp_result > 0:
         # 如果接口版本号更大，创建新版本文件夹并下载文件
         version_folder = f"版本-{latest_version_interface}"
         os.makedirs(version_folder, exist_ok=True)
-
-        # 下载安装包、增量更新包和日志文件到版本文件夹
         install_package_path = os.path.join(version_folder, "羽华SMT快速编程系统NetworkSetup.exe")
         incremental_update_path = os.path.join(version_folder, "update.zip")
         log_path_folder = os.path.join(version_folder, "UpdateLogv5.0.htm")
