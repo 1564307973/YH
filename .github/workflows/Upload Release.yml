@@ -25,30 +25,22 @@ jobs:
         run: |
           set -e
           today=$(date +%Y-%m-%d)
-          # 找出今天新建的所有版本-*文件夹（只看主版本号为1的优先，否则全部）
-          folders=$(find . -maxdepth 1 -type d -name "版本-1.*" -printf "%T@ %p\n" | awk -v d="$today" '
-            {
-              cmd="date -d @"$1" +\"%Y-%m-%d\""
-              cmd | getline folder_date
-              close(cmd)
-              if(folder_date == d) print $2
-            }
-          ')
+          # 优先查找主版本号为1的今天新建的文件夹，否则查找所有今天新建的
+          folders=$(find . -maxdepth 1 -type d -name "版本-1.*" | while read f; do
+            folder_date=$(stat -c %y "$f" | cut -d' ' -f1)
+            [ "$folder_date" = "$today" ] && echo "$f"
+          done)
           if [ -z "$folders" ]; then
-            folders=$(find . -maxdepth 1 -type d -name "版本-*" -printf "%T@ %p\n" | awk -v d="$today" '
-              {
-                cmd="date -d @"$1" +\"%Y-%m-%d\""
-                cmd | getline folder_date
-                close(cmd)
-                if(folder_date == d) print $2
-              }
-            ')
+            folders=$(find . -maxdepth 1 -type d -name "版本-*" | while read f; do
+              folder_date=$(stat -c %y "$f" | cut -d' ' -f1)
+              [ "$folder_date" = "$today" ] && echo "$f"
+            done)
           fi
           if [ -z "$folders" ]; then
             echo "No new version folder found for today, nothing to release."
             exit 0
           fi
-          # 取今天新建的最大版本号文件夹
+          # 取最大版本号文件夹
           latest_folder=$(echo "$folders" | awk -F'版本-' '
             NF==2 && $2 ~ /^[0-9]+(\.[0-9]+)*$/ {
               split($2, a, ".")
@@ -75,7 +67,7 @@ jobs:
             -H "Accept: application/vnd.github.v3+json" \
             "https://api.github.com/repos/${{ github.repository }}/releases" | \
             jq -r --arg VERSION "$VERSION" '.[] | select(.tag_name == $VERSION) | .id')
-          if [ -n "$RELEASE_EXISTS" ]; then
+          if [ -n "$RELEASE_EXISTS" ] && [ "$RELEASE_EXISTS" != "null" ]; then
             echo "Release for version $VERSION already exists. Skipping release creation."
             echo "RELEASE_EXISTS=true" >> $GITHUB_ENV
           else
@@ -89,9 +81,15 @@ jobs:
         id: create_zip
         run: |
           set -e
+          if [ -z "$(ls -A "${{ env.FOLDER_NAME }}")" ]; then
+            echo "No files to zip in ${{ env.FOLDER_NAME }}, skipping."
+            exit 1
+          fi
           echo "Creating ZIP file for folder: ${{ env.FOLDER_NAME }}"
           ZIP_FILE="NetworkSetup-${{ env.VERSION }}.zip"
-          zip -r "$ZIP_FILE" "${{ env.FOLDER_NAME }}"/*
+          cd "${{ env.FOLDER_NAME }}"
+          zip -r "../$ZIP_FILE" ./*
+          cd ..
           echo "ZIP_FILE=$ZIP_FILE" >> $GITHUB_ENV
           echo "Created ZIP file: $ZIP_FILE"
 
