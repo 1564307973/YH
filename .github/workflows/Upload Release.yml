@@ -25,16 +25,32 @@ jobs:
         run: |
           set -e
           today=$(date +%Y-%m-%d)
-          # 查找今天创建/修改的版本-*文件夹
-          folder=$(find . -maxdepth 1 -type d -name "版本-*" -newermt "$today 00:00:00" ! -newermt "$today 23:59:59" | head -n 1)
-          if [ -z "$folder" ]; then
+          # 找出今天新建的所有版本-*文件夹
+          folders=$(find . -maxdepth 1 -type d -name "版本-*" -printf "%T@ %p\n" | awk -v d="$today" '
+            {
+              cmd="date -d @"$1" +\"%Y-%m-%d\""
+              cmd | getline folder_date
+              close(cmd)
+              if(folder_date == d) print $2
+            }
+          ')
+          if [ -z "$folders" ]; then
             echo "No new version folder found for today, nothing to release."
             exit 0
           fi
-          version=$(basename "$folder" | sed 's/^版本-//')
-          echo "Found folder: $folder, version: $version"
+          # 取今天新建的最大版本号文件夹
+          latest_folder=$(echo "$folders" | awk -F'版本-' '
+            NF==2 && $2 ~ /^[0-9]+(\.[0-9]+)*$/ {
+              split($2, a, ".")
+              ver=""
+              for(i=1;i<=length(a);i++) ver=ver sprintf("%09d", a[i])
+              print ver " " $0
+            }
+          ' | sort | tail -n1 | cut -d' ' -f2-)
+          version=$(basename "$latest_folder" | sed 's/^版本-//')
+          echo "Found folder: $latest_folder, version: $version"
           echo "VERSION=$version" >> $GITHUB_ENV
-          echo "FOLDER_NAME=$folder" >> $GITHUB_ENV
+          echo "FOLDER_NAME=$latest_folder" >> $GITHUB_ENV
 
       # 检查 Release 是否已存在
       - name: Check if Release already exists
