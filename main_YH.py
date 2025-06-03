@@ -99,27 +99,8 @@ def update_software():
 
     # 获取本地已有的版本号列表
     local_versions = get_local_versions()
-    if not local_versions:
-        # 如果本地没有任何版本文件夹，直接下载并创建文件夹
-        version_folder = f"版本-{latest_version_interface}"
-        os.makedirs(version_folder, exist_ok=True)
-
-        # 下载安装包、增量更新包和日志文件到版本文件夹
-        install_package_path = os.path.join(version_folder, "羽华SMT快速编程系统NetworkSetup.exe")
-        incremental_update_path = os.path.join(version_folder, "update.zip")
-        log_path_folder = os.path.join(version_folder, "UpdateLogv5.0.htm")
-        download_file(INSTALL_PACKAGE_URL, install_package_path)
-        download_file(INCREMENTAL_UPDATE_URL, incremental_update_path)
-        download_file(LOG_FILE_URL, log_path_folder, base_url=BASE_URL)
-        logging.info("首次下载软件相关文件，爬取完成。 %s", latest_version_interface)
-        return
-
-    # 对比接口获取的版本号和本地最大版本号
-    local_versions.sort(key=lambda x: parse_version(x), reverse=True)
-    local_max_version = local_versions[0]
-    cmp_result = compare_versions(latest_version_interface, local_max_version)
-    if cmp_result > 0:
-        # 如果接口版本号更大，创建新版本文件夹并下载文件
+    if latest_version_interface not in local_versions:
+        # 如果本地没有该版本，直接下载并创建文件夹
         version_folder = f"版本-{latest_version_interface}"
         os.makedirs(version_folder, exist_ok=True)
         install_package_path = os.path.join(version_folder, "羽华SMT快速编程系统NetworkSetup.exe")
@@ -130,7 +111,7 @@ def update_software():
         download_file(LOG_FILE_URL, log_path_folder, base_url=BASE_URL)
         logging.info("软件有更新，已完成爬取操作。 %s", latest_version_interface)
     else:
-        logging.info("软件已是最新版本，无需爬取。 %s", local_max_version)
+        logging.info("软件已是最新版本，无需爬取。 %s", latest_version_interface)
 
 
 if __name__ == "__main__":
