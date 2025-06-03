@@ -20,7 +20,7 @@ jobs:
       - name: Find folders in the root directory
         id: find_folder
         run: |
-          set -e  # 开启严格模式，遇到错误立即退出
+          set -e
           FOLDER_NAME=$(find . -maxdepth 1 -type d -name "版本-*" | sort -V | tail -n 1)
           if [ -z "$FOLDER_NAME" ]; then
             echo "No folder found that matches the pattern '版本-*'."
