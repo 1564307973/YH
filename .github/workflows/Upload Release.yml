@@ -20,27 +20,19 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y jq
 
       # 查找版本文件夹并提取版本号
-      - name: Find folders in the root directory
+      - name: Set version by date
         id: find_folder
         run: |
           set -e
-          # 用awk按数字段比较，选出最大版本号的文件夹
-          latest_folder=$(ls -d 版本-* 2>/dev/null | awk -F'版本-' '
-            NF==2 && $2 ~ /^[0-9]+(\.[0-9]+)*$/ {
-              split($2, a, ".")
-              ver=""
-              for(i=1;i<=length(a);i++) ver=ver sprintf("%09d", a[i])
-              print ver " " $0
-            }
-          ' | sort | tail -n1 | cut -d' ' -f2-)
-          if [ -z "$latest_folder" ]; then
-            echo "No valid '版本-*' folder found in the root directory."
-            exit 1
+          today=$(date +%Y-%m-%d)
+          version_folder="版本-$today"
+          if [ ! -d "$version_folder" ]; then
+            echo "No folder for today ($version_folder), nothing to release."
+            exit 0
           fi
-          latest_version="${latest_folder#版本-}"
-          echo "Found folder: $latest_folder, version: $latest_version"
-          echo "VERSION=$latest_version" >> $GITHUB_ENV
-          echo "FOLDER_NAME=$latest_folder" >> $GITHUB_ENV
+          echo "Found folder: $version_folder, version: $today"
+          echo "VERSION=$today" >> $GITHUB_ENV
+          echo "FOLDER_NAME=$version_folder" >> $GITHUB_ENV
 
       # 检查 Release 是否已存在
       - name: Check if Release already exists
