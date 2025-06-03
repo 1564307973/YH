@@ -19,20 +19,22 @@ jobs:
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
 
-      # 查找版本文件夹并提取版本号
-      - name: Set version by date
+      # 查找当天新下载的版本文件夹并提取真实版本号
+      - name: Find today's new version folder and extract version
         id: find_folder
         run: |
           set -e
           today=$(date +%Y-%m-%d)
-          version_folder="版本-$today"
-          if [ ! -d "$version_folder" ]; then
-            echo "No folder for today ($version_folder), nothing to release."
+          # 查找今天创建/修改的版本-*文件夹
+          folder=$(find . -maxdepth 1 -type d -name "版本-*" -newermt "$today 00:00:00" ! -newermt "$today 23:59:59" | head -n 1)
+          if [ -z "$folder" ]; then
+            echo "No new version folder found for today, nothing to release."
             exit 0
           fi
-          echo "Found folder: $version_folder, version: $today"
-          echo "VERSION=$today" >> $GITHUB_ENV
-          echo "FOLDER_NAME=$version_folder" >> $GITHUB_ENV
+          version=$(basename "$folder" | sed 's/^版本-//')
+          echo "Found folder: $folder, version: $version"
+          echo "VERSION=$version" >> $GITHUB_ENV
+          echo "FOLDER_NAME=$folder" >> $GITHUB_ENV
 
       # 检查 Release 是否已存在
       - name: Check if Release already exists
