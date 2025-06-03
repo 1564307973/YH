@@ -21,9 +21,24 @@ jobs:
         id: find_folder
         run: |
           set -e
-          FOLDER_NAME=$(find . -maxdepth 1 -type d -name "版本-*" | sort -V | tail -n 1)
+          # 用 Python 找到最大版本号的文件夹，支持多级版本号
+          FOLDER_NAME=$(python3 -c "
+import os, re, sys
+def parse_version(s):
+    return [int(x) for x in s.split('.')]
+folders = [f for f in os.listdir('.') if os.path.isdir(f) and f.startswith('版本-')]
+candidates = []
+for f in folders:
+    v = f.replace('版本-', '')
+    if re.fullmatch(r'\d+(\.\d+)*', v):
+        candidates.append((f, v))
+if not candidates:
+    print('', end=''); sys.exit(1)
+latest = max(candidates, key=lambda x: parse_version(x[1]))
+print(latest[0], end='')
+")
           if [ -z "$FOLDER_NAME" ]; then
-            echo "No folder found that matches the pattern '版本-*'."
+            echo "No valid '版本-*' folder found in the root directory."
             exit 1
           fi
           VERSION=$(basename "$FOLDER_NAME" | sed 's/^版本-//')
