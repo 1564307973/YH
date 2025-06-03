@@ -14,7 +14,10 @@ jobs:
     steps:
       # 检出代码
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
 
       # 查找版本文件夹并提取版本号
       - name: Find folders in the root directory
@@ -53,24 +56,20 @@ PYEOF
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          set -e  # 遇到错误立即退出
-          VERSION=${{ env.VERSION }}
+          set -e
+          VERSION="${{ env.VERSION }}"
           echo "Checking if release for version $VERSION exists..."
-          
-          # 使用 curl 调用 GitHub API，检查是否已发布该版本的 Release
           RELEASE_EXISTS=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
             -H "Accept: application/vnd.github.v3+json" \
             "https://api.github.com/repos/${{ github.repository }}/releases" | \
             jq -r --arg VERSION "$VERSION" '.[] | select(.tag_name == $VERSION) | .id')
-
-          # 检查是否已存在 Release
           if [ -n "$RELEASE_EXISTS" ]; then
             echo "Release for version $VERSION already exists. Skipping release creation."
             echo "RELEASE_EXISTS=true" >> $GITHUB_ENV
           else
             echo "No existing release found for version $VERSION. Proceeding with release."
             echo "RELEASE_EXISTS=false" >> $GITHUB_ENV
-          fi  # 确保添加了 fi 来结束 if 语句
+          fi
 
       # 创建 ZIP 文件（带版本号）
       - name: Create ZIP file with required files
@@ -80,7 +79,7 @@ PYEOF
           set -e
           echo "Creating ZIP file for folder: ${{ env.FOLDER_NAME }}"
           ZIP_FILE="NetworkSetup-${{ env.VERSION }}.zip"
-          zip -r $ZIP_FILE ${{ env.FOLDER_NAME }}/*
+          zip -r "$ZIP_FILE" "${{ env.FOLDER_NAME }}"/*
           echo "ZIP_FILE=$ZIP_FILE" >> $GITHUB_ENV
           echo "Created ZIP file: $ZIP_FILE"
 
