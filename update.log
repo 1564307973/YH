@@ -114,3 +114,5 @@
 2025-09-22 02:06:32 - 软件已是最新版本，无需爬取。 1.0.757.1
 2025-09-23 01:56:10 - 从接口获取版本号时出错: HTTPSConnectionPool(host='smtapi.smtoem.cn', port=443): Max retries exceeded with url: /updateFlie/Autoupdater.xml (Caused by ConnectTimeoutError(<urllib3.connection.HTTPSConnection object at 0x7f5cb1141750>, 'Connection to smtapi.smtoem.cn timed out. (connect timeout=10)'))， 重试 1/3 次
 2025-09-23 01:56:10 - 软件已是最新版本，无需爬取。 1.0.757.1
+2025-09-24 01:57:45 - 从接口获取版本号时出错: HTTPSConnectionPool(host='smtapi.smtoem.cn', port=443): Max retries exceeded with url: /updateFlie/Autoupdater.xml (Caused by ConnectTimeoutError(<urllib3.connection.HTTPSConnection object at 0x7f8fd6252bf0>, 'Connection to smtapi.smtoem.cn timed out. (connect timeout=10)'))， 重试 1/3 次
+2025-09-24 01:57:46 - 软件已是最新版本，无需爬取。 1.0.757.1
