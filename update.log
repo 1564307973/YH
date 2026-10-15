@@ -537,3 +537,4 @@
 2026-10-13 06:40:27 - 从接口获取版本号时出错: HTTPSConnectionPool(host='smtapi.smtoem.cn', port=443): Max retries exceeded with url: /updateFlie/Autoupdater.xml (Caused by SSLError(SSLCertVerificationError(1, '[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: certificate has expired (_ssl.c:1017)')))， 重试 3/3 次
 2026-10-13 06:40:27 - 从接口获取版本号失败，重试 3 次后仍未成功
 2026-10-14 04:43:34 - 软件已是最新版本，无需爬取。 1.0.763
+2026-10-15 04:25:13 - 软件已是最新版本，无需爬取。 1.0.763
